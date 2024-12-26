@@ -1,0 +1,37 @@
+#spring:
+#  cloud:
+#    gateway:
+#      mvc:
+#        routes:
+#          - id: r1
+#            uri: http://localhost:8080/
+#            predicates:
+#              - Path=/clients/**
+#          - id: r2
+#            uri: http://localhost:8080/
+#            predicates:
+#              - Path=/client/**
+#          - id: r3
+#            uri: http://localhost:8089/
+#            predicates:
+#              - Path=/voitures/**
+#          - id: r4
+#            uri: http://localhost:8089/
+#            predicates:
+#              - Path=/voiture/**
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: lb://SERVICE_USER
+          predicates:
+            - Path=/api/users/**
+        - id: project-service
+          uri: lb://SERVICE_PROJECT
+          predicates:
+            - Path=/api/projects/**
+        - id: algorithm-service
+          uri: lb:/SERVICE_ALGORITHM
+          predicates:
+            - Path=/api/algorithms/**
