@@ -11,6 +11,7 @@ public class Algorithm {
     private String name;
     @Column(length = 5000)
     private String code;
+    private String recommendation;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
@@ -20,11 +21,20 @@ public class Algorithm {
     public Algorithm() {
     }
 
-    public Algorithm(Long id, String code, String name, Project project) {
+    public Algorithm(Long id, String code, String name, Project project, String recommendation) {
         this.id = id;
         this.code = code;
         this.name = name;
         this.project = project;
+        this.recommendation = recommendation;
+    }
+
+    public String getRecommendation() {
+        return recommendation;
+    }
+
+    public void setRecommendation(String recommendation) {
+        this.recommendation = recommendation;
     }
 
     public Long getId() {

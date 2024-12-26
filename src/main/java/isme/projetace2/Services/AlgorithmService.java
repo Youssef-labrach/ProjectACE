@@ -39,7 +39,21 @@ public class AlgorithmService {
 
         return algorithms;
     }
-
+    private String getRecommendation(String algorithmName) {
+        // Logic to provide a recommendation based on the algorithm name
+        switch (algorithmName) {
+            case "Sorting Algorithm: Insertion Sort":
+                return "Consider using QuickSort for better average-case complexity.";
+            case "Sorting Algorithm: Selection Sort":
+                return "Consider using QuicSort for better performance on large datasets.";
+            case "Sorting Algorithm: Quick Sort", "Searching Algorithm: Binary Search":
+                return "You are using the best algorithm.";
+            case "Searching Algorithm: Linear Search":
+                return "Consider using Binary Search for better performance.";
+            default:
+                return "No recommendation available for this algorithm.";
+        }
+    }
     private String readFile(String filePath) {
         try {
             return new String(Files.readAllBytes(Paths.get(filePath)));
@@ -71,12 +85,14 @@ public class AlgorithmService {
                 // Detect patterns in the method
                 if (isSortingAlgorithm(method)) {
                     String algorithmName = "Sorting Algorithm: " + getSortingAlgorithmType(method);
+                    String recommendation = getRecommendation(algorithmName);
                     detectedAlgorithms.add(algorithmName + "\n" + methodCode);
-                    saveAlgorithm(algorithmName, methodCode, project);
+                    saveAlgorithm(algorithmName, methodCode, project, recommendation);
                 } else if (isSearchingAlgorithm(method)) {
                     String algorithmName = "Searching Algorithm: " + getSearchingAlgorithmType(method);
+                    String recommendation = getRecommendation(algorithmName);
                     detectedAlgorithms.add(algorithmName + "\n" + methodCode);
-                    saveAlgorithm(algorithmName, methodCode, project);
+                    saveAlgorithm(algorithmName, methodCode, project, recommendation);
                 }
 
                 return super.visit(method);
@@ -86,14 +102,14 @@ public class AlgorithmService {
         return detectedAlgorithms;
     }
 
-    private void saveAlgorithm(String name, String code, Project project) {
+    private void saveAlgorithm(String name, String code, Project project, String recommendation) {
         Algorithm algorithm = new Algorithm();
         algorithm.setName(name);
         algorithm.setCode(code);
         algorithm.setProject(project);
+        algorithm.setRecommendation(recommendation);
         algorithmRepository.save(algorithm);
     }
-
     private boolean isSortingAlgorithm(MethodDeclaration method) {
         return isInsertionSort(method) || isSelectionSort(method) || isQuickSort(method);
     }
