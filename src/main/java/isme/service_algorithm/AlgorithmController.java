@@ -16,4 +16,8 @@ public class AlgorithmController {
     public List<String> detectAlgorithms(@RequestParam String projectPath, @RequestParam Long projectId) {
         return algorithmService.detectAlgorithms(projectPath, projectId);
     }
+    @GetMapping("/project/{projectId}")
+    public List<Algorithm> getAlgorithmsByProjectId(@PathVariable Long projectId) {
+        return algorithmService.getAlgorithmsByProjectId(projectId);
+    }
 }
