@@ -1,4 +1,4 @@
-package isme.service_user;
+package isme.service_user.Models;
 
 import jakarta.persistence.*;
 
@@ -8,6 +8,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String password;
     private String username;
     private String email;
 
@@ -15,7 +16,12 @@ public class User {
     public Long getId() {
         return id;
     }
-
+    public String getPassword() {
+        return password;
+    }
+    public void setPassword(String password) {
+        this.password = password;
+    }
     public void setId(Long id) {
         this.id = id;
     }
@@ -35,4 +41,6 @@ public class User {
     public void setEmail(String email) {
         this.email = email;
     }
+
+
 }

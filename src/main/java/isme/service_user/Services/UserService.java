@@ -1,7 +1,8 @@
-package isme.service_user;
+package isme.service_user.Services;
 
+import isme.service_user.Models.User;
+import isme.service_user.Repositories.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

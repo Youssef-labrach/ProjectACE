@@ -1,5 +1,7 @@
-package isme.service_user;
+package isme.service_user.Controllers;
 
+import isme.service_user.Models.User;
+import isme.service_user.Services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
