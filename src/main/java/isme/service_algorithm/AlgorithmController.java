@@ -22,4 +22,8 @@ public class AlgorithmController {
     public List<Algorithm> getAlgorithmsByProjectId(@PathVariable Long projectId) {
         return algorithmService.getAlgorithmsByProjectId(projectId);
     }
+    @PostMapping("/detectFromGitHub")
+    public List<String> detectAlgorithmsFromGitHub(@RequestParam String githubUrl, @RequestParam Long projectId) throws IOException {
+        return algorithmService.detectAlgorithmsFromGitHub(githubUrl, projectId);
+    }
 }

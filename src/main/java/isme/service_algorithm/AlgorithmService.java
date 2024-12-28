@@ -1,10 +1,13 @@
 package isme.service_algorithm;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.HttpURLConnection;
 import java.nio.file.Path;
 import java.util.List;
 import org.eclipse.jdt.core.dom.*;
@@ -20,7 +23,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-
+import java.nio.file.StandardCopyOption;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 @Service
 public class AlgorithmService {
 
@@ -73,6 +82,134 @@ public class AlgorithmService {
 
         return algorithms;
     }
+//    public List<String> detectAlgorithmsFromGitHub(String githubUrl, Long projectId) throws IOException {
+//        Logger logger = LoggerFactory.getLogger(AlgorithmService.class);
+//
+//        if (!projectExists(projectId)) {
+//            throw new IllegalArgumentException("Project with ID " + projectId + " does not exist.");
+//        }
+//
+//        List<String> algorithms = new ArrayList<>();
+//        Path tempDir = Files.createTempDirectory("project");
+//
+//        logger.info("Downloading project from GitHub URL: {}", githubUrl);
+//
+//        // Download the project ZIP from GitHub
+//        URL url = new URL(githubUrl);
+//        try (ZipInputStream zis = new ZipInputStream(url.openStream())) {
+//            ZipEntry zipEntry;
+//            while ((zipEntry = zis.getNextEntry()) != null) {
+//                Path filePath = tempDir.resolve(zipEntry.getName());
+//                if (!zipEntry.isDirectory()) {
+//                    Files.createDirectories(filePath.getParent());
+//                    Files.copy(zis, filePath, StandardCopyOption.REPLACE_EXISTING);
+//                    logger.info("Extracted file: {}", filePath);
+//                }
+//            }
+//
+//            Files.walk(tempDir)
+//                    .filter(Files::isRegularFile)
+//                    .filter(path -> path.toString().endsWith(".java"))
+//                    .forEach(filePath -> {
+//                        String code = readFile(filePath.toString());
+//                        if (code != null) {
+//                            List<String> detectedAlgorithms = analyzeFile(code, projectId);
+//                            algorithms.addAll(detectedAlgorithms);
+//                            logger.info("Detected algorithms in file {}: {}", filePath, detectedAlgorithms);
+//                        }
+//                    });
+//        } catch (IOException e) {
+//            logger.error("Error processing GitHub project", e);
+//        } finally {
+//            // Clean up temporary directory
+//            Files.walk(tempDir)
+//                    .sorted(Comparator.reverseOrder())
+//                    .map(Path::toFile)
+//                    .forEach(File::delete);
+//        }
+//
+//        logger.info("Total algorithms detected: {}", algorithms.size());
+//        return algorithms;
+//    }
+public String getGitHubZipUrl(String githubUrl) {
+    if (githubUrl == null || githubUrl.isEmpty()) {
+        throw new IllegalArgumentException("GitHub URL cannot be null or empty");
+    }
+
+    if (githubUrl.endsWith(".git")) {
+        githubUrl = githubUrl.substring(0, githubUrl.length() - 4);
+    }
+
+    // Tentez "main" puis "master" si nécessaire
+    String zipUrl = githubUrl + "/archive/refs/heads/main.zip";
+    try {
+        HttpURLConnection connection = (HttpURLConnection) new URL(zipUrl).openConnection();
+        connection.setRequestMethod("HEAD");
+        if (connection.getResponseCode() == 404) {
+            zipUrl = githubUrl + "/archive/refs/heads/master.zip";
+        }
+    } catch (IOException e) {
+        throw new RuntimeException("Failed to validate GitHub ZIP URL", e);
+    }
+
+    return zipUrl;
+}
+    public List<String> detectAlgorithmsFromGitHub(String githubUrl, Long projectId) throws IOException {
+        Logger logger = LoggerFactory.getLogger(AlgorithmService.class);
+
+        if (!projectExists(projectId)) {
+            throw new IllegalArgumentException("Project with ID " + projectId + " does not exist.");
+        }
+
+        // Transformer l'URL GitHub
+        String zipUrl = getGitHubZipUrl(githubUrl);
+        logger.info("Transformed GitHub URL to ZIP: {}", zipUrl);
+
+        List<String> algorithms = new ArrayList<>();
+        Path tempDir = Files.createTempDirectory("project");
+        logger.info("Temporary directory created at: {}", tempDir.toAbsolutePath());
+
+        try (ZipInputStream zis = new ZipInputStream(new URL(zipUrl).openStream())) {
+            ZipEntry zipEntry;
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                Path filePath = tempDir.resolve(zipEntry.getName());
+                if (!zipEntry.isDirectory() && zipEntry.getName().endsWith(".java")) {
+                    Files.createDirectories(filePath.getParent());
+                    Files.copy(zis, filePath, StandardCopyOption.REPLACE_EXISTING);
+                    logger.info("Extracted Java file: {}", filePath);
+                }
+            }
+
+            // Analyse des fichiers Java
+            Files.walk(tempDir)
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .forEach(filePath -> {
+                        String code = readFile(filePath.toString());
+                        if (code != null) {
+                            List<String> detectedAlgorithms = analyzeFile(code, projectId);
+                            algorithms.addAll(detectedAlgorithms);
+                            logger.info("Detected algorithms in file {}: {}", filePath, detectedAlgorithms);
+                        }
+                    });
+        } catch (IOException e) {
+            logger.error("Error processing GitHub project", e);
+        } finally {
+            // Nettoyage du répertoire temporaire
+            try {
+                Files.walk(tempDir)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                logger.error("Error cleaning up temporary directory", e);
+            }
+        }
+
+        logger.info("Total algorithms detected: {}", algorithms.size());
+        return algorithms;
+    }
+
     private boolean projectExists(Long projectId) {
         String url = projectServiceUrl + "/" + projectId;
         try {
@@ -107,6 +244,7 @@ public class AlgorithmService {
     }
 
     private List<String> analyzeFile(String code, Long projectId) {
+        Logger logger = LoggerFactory.getLogger(AlgorithmService.class);
         List<String> detectedAlgorithms = new ArrayList<>();
 
         ASTParser parser = ASTParser.newParser(AST.JLS8);
@@ -119,6 +257,7 @@ public class AlgorithmService {
             @Override
             public boolean visit(MethodDeclaration method) {
                 String methodName = method.getName().toString();
+                logger.info("Analyzing method: {}", methodName);
                 if (methodName.equals("partition")) {
                     return false; // Skip the partition method
                 }
@@ -131,17 +270,20 @@ public class AlgorithmService {
                     String recommendation = getRecommendation(algorithmName);
                     detectedAlgorithms.add(algorithmName + "\n" + methodCode);
                     saveAlgorithm(algorithmName, methodCode, projectId, recommendation);
+                    logger.info("Detected sorting algorithm: {}", algorithmName);
                 } else if (isSearchingAlgorithm(method)) {
                     String algorithmName = "Searching Algorithm: " + getSearchingAlgorithmType(method);
                     String recommendation = getRecommendation(algorithmName);
                     detectedAlgorithms.add(algorithmName + "\n" + methodCode);
                     saveAlgorithm(algorithmName, methodCode, projectId, recommendation);
+                    logger.info("Detected searching algorithm: {}", algorithmName);
                 }
 
                 return super.visit(method);
             }
         });
 
+        logger.info("Algorithms detected in file: {}", detectedAlgorithms);
         return detectedAlgorithms;
     }
 
