@@ -2,7 +2,9 @@ package isme.service_algorithm;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -13,8 +15,8 @@ public class AlgorithmController {
     private AlgorithmService algorithmService;
 
     @PostMapping("/detect")
-    public List<String> detectAlgorithms(@RequestParam String projectPath, @RequestParam Long projectId) {
-        return algorithmService.detectAlgorithms(projectPath, projectId);
+    public List<String> detectAlgorithms(@RequestParam MultipartFile projectFile, @RequestParam Long projectId) throws IOException {
+        return algorithmService.detectAlgorithms(projectFile, projectId);
     }
     @GetMapping("/project/{projectId}")
     public List<Algorithm> getAlgorithmsByProjectId(@PathVariable Long projectId) {

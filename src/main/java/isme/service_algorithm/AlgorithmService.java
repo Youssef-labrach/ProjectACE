@@ -5,12 +5,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.file.Path;
 import java.util.List;
 import org.eclipse.jdt.core.dom.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
-
-
+import java.nio.file.StandardCopyOption;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.Comparator;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -22,18 +27,31 @@ public class AlgorithmService {
     @Autowired
     private AlgorithmRepo algorithmRepository;
 
-    @Autowired
-    private RestTemplate restTemplate;
-
     @Value("${service.project.url}")
     private String projectServiceUrl;
 
-    public List<String> detectAlgorithms(String projectPath, Long projectId) {
+    @Autowired
+    private RestTemplate restTemplate;
+
+    public List<String> detectAlgorithms(MultipartFile projectFile, Long projectId) throws IOException {
+        if (!projectExists(projectId)) {
+            throw new IllegalArgumentException("Project with ID " + projectId + " does not exist.");
+        }
 
         List<String> algorithms = new ArrayList<>();
+        Path tempDir = Files.createTempDirectory("project");
 
-        try {
-            Files.walk(Paths.get(projectPath))
+        try (ZipInputStream zis = new ZipInputStream(projectFile.getInputStream())) {
+            ZipEntry zipEntry;
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                Path filePath = tempDir.resolve(zipEntry.getName());
+                if (!zipEntry.isDirectory()) {
+                    Files.createDirectories(filePath.getParent());
+                    Files.copy(zis, filePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+
+            Files.walk(tempDir)
                     .filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
                     .forEach(filePath -> {
@@ -45,9 +63,24 @@ public class AlgorithmService {
                     });
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            // Clean up temporary directory
+            Files.walk(tempDir)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
         }
 
         return algorithms;
+    }
+    private boolean projectExists(Long projectId) {
+        String url = projectServiceUrl + "/" + projectId;
+        try {
+            restTemplate.getForObject(url, Void.class);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
     private String getRecommendation(String algorithmName) {
         // Logic to provide a recommendation based on the algorithm name
