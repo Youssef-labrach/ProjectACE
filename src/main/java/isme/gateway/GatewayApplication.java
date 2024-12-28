@@ -23,9 +23,9 @@ public class GatewayApplication {
 //                .route(r->r.path("/clients/**").uri("lb://Client"))
 //                .build();
 //    }
-//    @Bean
-//    DiscoveryClientRouteDefinitionLocator routesDynamiques(ReactiveDiscoveryClient rdc, DiscoveryLocatorProperties dlp){
-//        return new DiscoveryClientRouteDefinitionLocator(rdc,dlp);
-//
-//    }
+    @Bean
+    DiscoveryClientRouteDefinitionLocator routesDynamiques(ReactiveDiscoveryClient rdc, DiscoveryLocatorProperties dlp){
+        return new DiscoveryClientRouteDefinitionLocator(rdc,dlp);
+
+    }
 }
